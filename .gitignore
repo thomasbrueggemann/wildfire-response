@@ -1,0 +1,7 @@
+node_modules/
+shots/
+*.log
+
+# Built by CI and published to Pages; never committed.
+dist/
+.DS_Store

@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Wildfire Response</title>
+<meta name="description" content="Drive a fire appliance, work a roof monitor, and hold a spreading wildfire back from three mountain towns.">
+
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="theme-color" content="#0d1218">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Wildfire">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+
+<canvas id="gameCanvas"></canvas>
+
+<!-- ============================= HUD ============================= -->
+<div id="hud" class="hud">
+
+  <!-- top-left: mission clock and fire status -->
+  <div class="panel top-left">
+    <div class="clock">
+      <span id="timerValue">4:10</span>
+      <small id="phaseLabel">ACTIVE SPREAD</small>
+    </div>
+    <div class="stat-row">
+      <div class="pill" id="firePill">
+        <span class="pill-icon">🔥</span>
+        <span id="fireCount">0</span>
+        <small>fires</small>
+      </div>
+      <div class="pill">
+        <span class="pill-icon wind-icon"><i id="windArrow">↑</i></span>
+        <span id="windText">18 km/h</span>
+      </div>
+    </div>
+    <div class="integrity">
+      <div class="integrity-head">
+        <span>TOWN INTEGRITY</span><b id="integrityValue">100%</b>
+      </div>
+      <div class="bar" id="integrityBar"><i></i></div>
+      <div id="townList" class="town-list"></div>
+    </div>
+  </div>
+
+  <!-- top-right: minimap -->
+  <div class="top-right">
+    <div id="minimapWrap" class="minimap-wrap">
+      <canvas id="minimapCanvas"></canvas>
+      <div class="minimap-legend">
+        <span><i class="dot fire"></i>fire</span>
+        <span><i class="dot water"></i>water</span>
+        <span><i class="dot town"></i>town</span>
+      </div>
+    </div>
+    <div class="top-buttons">
+      <button id="mapBtn" class="icon-btn" title="Expand map (M)">⛶</button>
+      <button id="muteBtn" class="icon-btn" title="Mute (N)">🔊</button>
+      <button id="pauseBtn" class="icon-btn" title="Pause (Esc)">⏸</button>
+    </div>
+  </div>
+
+  <!-- bottom-left: vehicle gauges -->
+  <div class="panel bottom-left">
+    <div class="truck-head">
+      <span id="truckName">Ranger Pumper</span>
+      <span class="cam-tag" id="cameraLabel">Chase</span>
+    </div>
+    <div class="gauge-row">
+      <div class="gauge-block">
+        <label>WATER</label>
+        <div class="gauge water" id="gaugeWater"><i></i></div>
+        <span class="gauge-text" id="waterText">1900 / 1900 L</span>
+      </div>
+      <div class="gauge-block">
+        <label>CONDITION</label>
+        <div class="gauge health" id="gaugeHealth"><i></i></div>
+        <span class="gauge-text" id="healthText">100%</span>
+      </div>
+    </div>
+    <div class="readouts">
+      <div class="readout"><b id="speedValue">0</b><small>km/h</small></div>
+      <div class="readout"><b id="gearLabel">OFF</b><small>surface</small></div>
+      <div class="readout"><b id="rangeValue">—</b><small>jet range</small></div>
+    </div>
+  </div>
+
+  <!-- centre feedback -->
+  <div id="alertStack" class="alert-stack"></div>
+  <div id="banner" class="banner"><b id="bannerTitle"></b><span id="bannerText"></span></div>
+  <div id="refillPrompt" class="prompt">STOP TO REFILL</div>
+  <div id="lowWaterWarn" class="low-water">LOW WATER</div>
+  <div id="firePointers" class="fire-pointers"></div>
+  <div id="heatVignette" class="heat-vignette"></div>
+
+  <!-- ====================== touch controls ====================== -->
+  <div class="touch-layer">
+    <div id="driveZone" class="stick-zone left">
+      <div id="driveBase" class="stick-base"></div>
+      <div id="driveKnob" class="stick-knob"></div>
+      <span class="stick-hint">DRIVE</span>
+    </div>
+
+    <div id="aimZone" class="stick-zone right">
+      <div id="aimBase" class="stick-base"></div>
+      <div id="aimKnob" class="stick-knob"></div>
+      <span class="stick-hint">AIM MONITOR</span>
+    </div>
+
+    <div class="action-cluster">
+      <button id="sprayBtn" class="action-btn spray">
+        <span class="ab-glyph">💧</span><span class="ab-label">SPRAY</span>
+      </button>
+      <div class="action-mini">
+        <button id="brakeBtn" class="action-btn small">BRAKE</button>
+        <button id="cameraBtn" class="action-btn small">CAM</button>
+        <button id="sirenBtn" class="action-btn small">SIREN</button>
+        <button id="hornBtn" class="action-btn small">HORN</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========================= loading ========================= -->
+<div id="loadingScreen" class="screen loading">
+  <div class="load-inner">
+    <div class="logo">
+      <span class="logo-flame">🔥</span>
+      <h1>WILDFIRE<em>RESPONSE</em></h1>
+    </div>
+    <div class="load-bar"><i id="loadingBar"></i></div>
+    <p id="loadingText">Starting renderer…</p>
+  </div>
+</div>
+
+<!-- ========================= garage ========================= -->
+<div id="garageScreen" class="screen garage hidden">
+  <div class="garage-grid">
+
+    <header class="garage-head">
+      <h1>WILDFIRE<em>RESPONSE</em></h1>
+      <p>A wildfire is running toward three mountain towns. Pick an appliance,
+         hold the line, and keep every roof standing.</p>
+    </header>
+
+    <section class="garage-preview">
+      <div id="previewPane" class="preview-pane"><canvas id="previewCanvas"></canvas></div>
+      <div class="preview-caption">
+        <b id="garageName">Ranger Pumper</b>
+        <span id="garageBlurb"></span>
+      </div>
+    </section>
+
+    <section class="garage-fleet">
+      <h2>Select your appliance</h2>
+      <div id="truckGrid" class="truck-grid"></div>
+    </section>
+
+    <footer class="garage-foot">
+      <div class="quality-row">
+        <span>Graphics</span>
+        <button data-quality="low" class="chip">Low</button>
+        <button data-quality="medium" class="chip">Medium</button>
+        <button data-quality="high" class="chip">High</button>
+      </div>
+      <div class="foot-actions">
+        <button id="helpBtn" class="ghost-btn">Controls</button>
+        <button id="installBtn" class="ghost-btn hidden">Install app</button>
+        <button id="startBtn" class="primary-btn">ROLL OUT</button>
+      </div>
+    </footer>
+  </div>
+
+  <div id="helpPanel" class="help-panel">
+    <button id="helpClose" class="help-close">✕</button>
+    <h3>Controls</h3>
+    <div class="help-cols">
+      <div>
+        <h4>Keyboard</h4>
+        <dl>
+          <dt>W / S</dt><dd>Throttle / reverse</dd>
+          <dt>A / D</dt><dd>Steer</dd>
+          <dt>Shift</dt><dd>Brake</dd>
+          <dt>Arrows</dt><dd>Aim the roof monitor</dd>
+          <dt>Space</dt><dd>Spray water</dd>
+          <dt>C · 1–5</dt><dd>Camera view</dd>
+          <dt>H · B</dt><dd>Siren · horn</dd>
+          <dt>M</dt><dd>Expand map</dd>
+          <dt>V</dt><dd>Mouse aiming</dd>
+          <dt>R</dt><dd>Recover to road</dd>
+          <dt>Esc</dt><dd>Pause</dd>
+        </dl>
+      </div>
+      <div>
+        <h4>Touch</h4>
+        <dl>
+          <dt>Left half</dt><dd>Drag anywhere to drive</dd>
+          <dt>Right half</dt><dd>Drag anywhere to aim</dd>
+          <dt>SPRAY</dt><dd>Hold to open the monitor</dd>
+          <dt>CAM</dt><dd>Cycle camera views</dd>
+        </dl>
+        <h4>How to win</h4>
+        <p class="help-note">
+          Fires spread downwind and uphill, and burn out once the fuel is gone.
+          Roads and wet ground stop them. Water is limited — refill at any blue
+          station. Hold the towns until the last ignition burns out.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========================= pause ========================= -->
+<div id="pauseScreen" class="screen modal hidden">
+  <div class="modal-card">
+    <h2>PAUSED</h2>
+    <p>The fire waits for no one.</p>
+    <div class="modal-actions">
+      <button id="resumeBtn" class="primary-btn">Resume</button>
+      <button id="quitBtn" class="ghost-btn">Back to garage</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========================= results ========================= -->
+<div id="endScreen" class="screen modal hidden">
+  <div class="modal-card wide">
+    <h2 id="endTitle" class="end-title win">FIRE CONTAINED</h2>
+    <p id="endReason"></p>
+    <div class="end-body">
+      <div class="grade-badge"><span>GRADE</span><b id="endGrade">A</b></div>
+      <div id="endStats" class="end-stats"></div>
+    </div>
+    <p id="endBest" class="end-best"></p>
+    <div class="modal-actions">
+      <button id="againBtn" class="primary-btn">Run it again</button>
+      <button id="garageBtn" class="ghost-btn">Change appliance</button>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>

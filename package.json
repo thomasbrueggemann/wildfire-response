@@ -1,0 +1,25 @@
+{
+  "name": "wildfire-response",
+  "version": "1.0.0",
+  "description": "A 3D wildfire-fighting PWA game",
+  "main": "index.js",
+  "scripts": {
+    "serve": "python3 -m http.server 8777",
+    "icons": "node tools/make-icons.mjs",
+    "test": "node tools/test-game.mjs",
+    "balance": "node tools/balance.mjs --runs 5",
+    "build": "node tools/build.mjs",
+    "test:dist": "node tools/test-game.mjs --dist"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "three": "^0.185.1"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "playwright": "^1.62.1"
+  }
+}
