@@ -1,5 +1,7 @@
 # Wildfire Response
 
+**▶ Play it: https://thomasbrueggemann.github.io/wildfire-response/**
+
 A 3D wildfire-fighting game that runs entirely in the browser and installs as a
 PWA on a tablet. You drive a fire appliance, work the roof monitor, and hold a
 wind-driven fire back from three mountain towns.
@@ -25,9 +27,10 @@ For development, `npm run serve` runs the unbundled sources from
 
 ### Publishing to GitHub Pages
 
-A workflow is included at `.github/workflows/deploy.yml`. Push to `main`, then
-set **Settings → Pages → Source → GitHub Actions** once. It builds and
-publishes `dist/` on every push.
+This repository already does it: `.github/workflows/deploy.yml` builds and
+publishes `dist/` on every push to `main`, with the Pages source set to
+*GitHub Actions*. `dist/` is gitignored — the published site is always rebuilt
+from source, so there is no build output to remember to commit.
 
 If you would rather not use Actions, commit `dist/` and point Pages at that
 folder — or just upload `dist/index.html` anywhere at all.
